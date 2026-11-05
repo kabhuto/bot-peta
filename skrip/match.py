@@ -64,7 +64,7 @@ for num, sids in tul.items():
     def total(sid):
         o = cand[sid]; return sum(np.hypot(p["px"][0] - o["cx"], p["px"][1] - o["cy"]) for p in grp)
     best = min(sids, key=total); ob = cand[best]
-    if any(np.hypot(cand[x]["cx"] - ob["cx"], cand[x]["cy"] - ob["cy"]) > 15 for x in sids):
+    if any(np.hypot(cand[x]["cx"] - ob["cx"], cand[x]["cy"] - ob["cy"]) > float(os.environ.get("AMBPX", 15)) for x in sids):
         ambig.add(num)
     for p in grp:
         moved[p["fid"]] = (ob["cx"], ob["cy"], float(np.hypot(p["px"][0] - ob["cx"], p["px"][1] - ob["cy"])), best)
