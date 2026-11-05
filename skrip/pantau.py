@@ -6,6 +6,28 @@ Hijau = dipindah, Kuning = dipindah_cek, Merah = parkir/belum_cocok, Abu = belum
 import os, sys, glob, time, sqlite3
 ROOT = r"D:\bot peta"
 desa = sys.argv[1] if len(sys.argv) > 1 else "004"; jeda = int(sys.argv[2]) if len(sys.argv) > 2 else 30
+if desa == "semua":                                  # ringkasan satu baris per folder desa
+    desas = [os.path.basename(d) for d in sorted(glob.glob(os.path.join(ROOT, "0*"))) if os.path.basename(d) != "geo"]
+    while True:
+        os.system("cls"); print(f"PROGRES SEMUA FOLDER   {time.strftime('%H:%M:%S')}  (tiap {jeda} dtk, Ctrl+C = berhenti)\n")
+        print(f"{'Desa':6}{'SLS':>5}{'Diproses':>9}{'Titik':>8}{'Hijau':>7}{'Kuning':>8}{'Merah':>7}{'Belum':>7}")
+        G = [0] * 6
+        for dd in desas:
+            ks = sorted({os.path.basename(f)[:-5].replace("_rapi_parkir", "") for f in glob.glob(os.path.join(ROOT, dd, "*.gpkg"))})
+            sls = len(ks); proc = n = g = y = m = belum = 0
+            for k in ks:
+                f = os.path.join(ROOT, dd, k + "_rapi_parkir.gpkg"); src = os.path.join(ROOT, dd, k + ".gpkg")
+                if os.path.exists(f):
+                    c = sqlite3.connect(f); t = c.execute("select table_name from gpkg_contents where data_type='features'").fetchone()[0]
+                    d = dict(c.execute(f'select status_pindah,count(*) from "{t}" group by 1').fetchall()); tt = sum(d.values())
+                    proc += 1; n += tt; g += d.get("dipindah", 0); y += d.get("dipindah_cek", 0); m += tt - d.get("dipindah", 0) - d.get("dipindah_cek", 0)
+                else:
+                    c = sqlite3.connect(src); t = c.execute("select table_name from gpkg_contents where data_type='features'").fetchone()[0]
+                    belum += c.execute(f'select count(*) from "{t}"').fetchone()[0]
+            print(f"{dd:6}{sls:5}{proc:9}{n:8}{g:7}{y:8}{m:7}{belum:7}")
+            for i, v in enumerate((sls, proc, n, g, y, m)): G[i] += v
+        print(f"\n{'TOTAL':6}{G[0]:5}{G[1]:9}{G[2]:8}{G[3]:7}{G[4]:8}{G[5]:7}")
+        time.sleep(jeda)
 def kode_semua():
     out = set()
     for f in glob.glob(os.path.join(ROOT, desa, "*.gpkg")):

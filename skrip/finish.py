@@ -15,7 +15,9 @@ SCR = os.path.dirname(os.path.abspath(__file__)); ROOT = r"D:\bot peta"
 desa, sls, maps = sys.argv[1:4]; RM = sys.argv[4] if len(sys.argv) > 4 else "400"
 maps = [m.strip() for m in maps.split(",")]
 kode = "3526020" + desa + sls
-tags = ["s" + re.sub(r"\W", "", m) for m in maps]
+sys.path.insert(0, SCR)
+from tagutil import tag_for
+tags = [tag_for(desa, m) for m in maps]
 envb = dict(os.environ, RM=RM, PYTHONIOENCODING="utf-8")
 drafts = []
 for m, tg in zip(maps, tags):
@@ -34,7 +36,7 @@ for c in conns:
     data.append({r[0]: r[1:] for r in c.execute(f'select fid,no_bang,status_pindah,geom,jarak_pindah_m,blob_id,lat_asli,lon_asli from "{T}"')})
 fids = sorted(data[0]); groups = collections.defaultdict(list)
 for f in fids: groups[data[0][f][0]].append(f)
-final = os.path.join(SCR, "s" + sls + "_final_gab.gpkg"); shutil.copyfile(drafts[-1], final)
+final = os.path.join(SCR, tags[-1] + "_final_gab.gpkg"); shutil.copyfile(drafts[-1], final)
 cf = sqlite3.connect(final); chosen = {}
 import struct, math
 import numpy as np
@@ -100,7 +102,7 @@ def plan():
     return (80, H - 70, step, step, 60)
 px_, py_, dx_, dy_, pr_ = plan()
 envp = dict(envb, PARK=f"{int(px_)},{int(py_)},{dx_},{dy_},{pr_}")
-out_tmp = os.path.join(SCR, "s" + sls + "_final.gpkg")
+out_tmp = os.path.join(SCR, tags[-1] + "_final.gpkg")
 r = subprocess.run([sys.executable, os.path.join(SCR, "park.py"), mainpgw, tags[-1], final, out_tmp], env=envp, capture_output=True, text=True)
 print(r.stdout); print(r.stderr[-500:] if r.returncode else "")
 out = os.path.join(ROOT, desa, kode + "_rapi_parkir.gpkg"); shutil.copyfile(out_tmp, out); print("disimpan:", out)

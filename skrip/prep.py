@@ -16,7 +16,9 @@ RM = float(sys.argv[3]) if len(sys.argv) > 3 else 30.0
 GROW = int(os.environ.get("GROW", 3)); MAXV = int(os.environ.get("MAXV", 85)); SAT = int(os.environ.get("SAT", 40))
 GAP = int(os.environ.get("GAP", 24))
 MAPNAME = os.environ.get("MAP", sls)          # contoh: "000102_Inset 1"
-tag = "s" + re.sub(r"\W", "", MAPNAME)
+sys.path.insert(0, SCR)
+from tagutil import tag_for
+tag = tag_for(desa, MAPNAME)
 png = os.path.join(ROOT, "geo", desa, MAPNAME + "_WSS.png"); pgw = png[:-4] + ".pgw"
 src = os.path.join(ROOT, desa, "3526020" + desa + sls + ".gpkg")
 shutil.copyfile(src, os.path.join(SCR, tag + ".gpkg"))
