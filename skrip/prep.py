@@ -86,8 +86,10 @@ for i, sl_ in enumerate(ndi.find_objects(lab2), 1):
     if np.hypot(gp[:, 0] - cx, gp[:, 1] - cy).min() * PS > RM: continue
     if any(np.hypot(d_["cx"] - cx, d_["cy"] - cy) < 16 for d_ in cand): continue
     cand.append(dict(id=len(cand), cx=float(cx), cy=float(cy)))
+if os.environ.get("SISA"):                    # pakai kandidat yang sudah ada (id bacaan lama tetap sah)
+    cand = json.load(open(os.path.join(SCR, tag + "_cand.json")))
 N0 = len(cand)
-if os.environ.get("INK"):
+if os.environ.get("INK") and not os.environ.get("SISA"):
     # tulisan tanpa titik hitam: gumpalan goresan angka yang tidak berdekatan dengan titik hitam mana pun.
     # id disambung di belakang titik hitam (id lama tetap), posisi = pusat tinta tulisan.
     lab3, n3 = ndi.label(ndi.binary_dilation(mask, structure=np.ones((3, 3)), iterations=5))
@@ -115,6 +117,10 @@ if AROUND:
 NEWONLY = int(os.environ.get("NEWONLY", 0))   # 1: lembar hanya untuk kandidat tulisan tambahan (xsheet), bacaan titik hitam tetap
 shown = cand[N0:] if NEWONLY else cand
 pref = "_xsheet" if NEWONLY else "_sheet"
+if os.environ.get("SISA"):                    # lembar hanya untuk kandidat yang belum ada bacaannya di s<peta>_reads.json (id kandidat lama dipertahankan)
+    _rp = os.path.join(SCR, tag + "_reads.json")
+    _done = set(json.load(open(_rp)).keys()) if os.path.exists(_rp) else set()
+    shown = [o for o in cand if str(o["id"]) not in _done]; pref = "_rsheet"
 for s in range(math.ceil(len(shown) / PER)):
     sheet = Image.new("RGB", (CW * COLS, CH * ROWS), "white"); dr = ImageDraw.Draw(sheet)
     for k, o in enumerate(shown[s * PER:(s + 1) * PER]):
