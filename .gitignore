@@ -1,0 +1,10 @@
+# data peta/gpkg tidak ikut di-commit
+*.gpkg
+*.gpkg-shm
+*.gpkg-wal
+*.png
+*.jpg
+*.jpeg
+*.tif
+*.json
+__pycache__/
