@@ -8,3 +8,6 @@
 *.tif
 *.json
 __pycache__/
+*.npy
+skrip/s*_*.gpkg
+skrip/s[0-9]*.gpkg

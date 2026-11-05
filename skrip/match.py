@@ -42,7 +42,8 @@ for fid, nb, lat, lon, blob, acc in c.execute(f'select fid,no_bang,geotag_latitu
     px = to_px(lat, lon)
     pts.append(dict(acc=float(acc) if acc else 0.0, fid=fid, nb=nb, num=int(nb) if nb and nb.isdigit() else None, lat=lat, lon=lon, px=px, blob=blob))
 
-moved = {}; log_mismatch = []
+moved = {}; log_mismatch = []; ambig = set()
+tul = collections.defaultdict(list)          # nomor -> tulisan (sid) yang membaca nomor itu dan dekat titik bernomor sama
 for sid, num in sorted(reads.items(), key=lambda kv: int(kv[0])):
     o = cand[int(sid)]
     near = [p for p in pts if p["num"] == num and np.hypot(p["px"][0] - o["cx"], p["px"][1] - o["cy"]) <= R]
@@ -50,10 +51,19 @@ for sid, num in sorted(reads.items(), key=lambda kv: int(kv[0])):
         around = sorted({p["num"] for p in pts if np.hypot(p["px"][0] - o["cx"], p["px"][1] - o["cy"]) <= R and p["num"] is not None})
         log_mismatch.append((int(sid), num, around))
         continue
-    for p in near:
-        if p["fid"] in moved and moved[p["fid"]][2] < np.hypot(p["px"][0] - o["cx"], p["px"][1] - o["cy"]):
-            continue
-        moved[p["fid"]] = (o["cx"], o["cy"], float(np.hypot(p["px"][0] - o["cx"], p["px"][1] - o["cy"])), int(sid))
+    tul[num].append(int(sid))
+# SATU nomor = SATU posisi: semua titik gpkg bernomor sama ditumpuk di satu tulisan
+# (tulisan dengan jumlah jarak ke seluruh titik kelompok paling kecil). Jika nomor itu terbaca di
+# beberapa tempat berjauhan, kelompok ditandai ambigu -> status cek manual.
+for num, sids in tul.items():
+    grp = [p for p in pts if p["num"] == num]
+    def total(sid):
+        o = cand[sid]; return sum(np.hypot(p["px"][0] - o["cx"], p["px"][1] - o["cy"]) for p in grp)
+    best = min(sids, key=total); ob = cand[best]
+    if any(np.hypot(cand[x]["cx"] - ob["cx"], cand[x]["cy"] - ob["cy"]) > 15 for x in sids):
+        ambig.add(num)
+    for p in grp:
+        moved[p["fid"]] = (ob["cx"], ob["cy"], float(np.hypot(p["px"][0] - ob["cx"], p["px"][1] - ob["cy"])), best)
 
 for p in pts:
     if p["fid"] in moved:
@@ -62,7 +72,7 @@ for p in pts:
         hdr = p["blob"][:8]
         newblob = hdr + struct.pack("<BIdd", 1, 1, lon, lat)
         c.execute(f'update "{t}" set geom=?, lat_asli=?, lon_asli=?, status_pindah=?, jarak_pindah_m=?, blob_id=? where fid=?',
-                  (newblob, p["lat"], p["lon"], "dipindah" if dpx * PS <= max(float(os.environ.get("CEKM", 20)), 1.5 * p["acc"]) else "dipindah_cek", round(dpx * PS, 1), sid, p["fid"]))
+                  (newblob, p["lat"], p["lon"], "dipindah" if (dpx * PS <= max(float(os.environ.get("CEKM", 20)), 1.5 * p["acc"]) and p["num"] not in ambig) else "dipindah_cek", round(dpx * PS, 1), sid, p["fid"]))
     else:
         c.execute(f'update "{t}" set lat_asli=?, lon_asli=?, status_pindah=? where fid=?', (p["lat"], p["lon"], "belum_cocok", p["fid"]))
 c.commit()

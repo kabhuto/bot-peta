@@ -54,8 +54,8 @@ for desa in sorted(d for d in os.listdir(root) if d.isdigit() and os.path.isdir(
             for r in rows:
                 st = {"dipindah": "HIJAU", "dipindah_cek": "KUNING", "parkir": "MERAH"}.get(r[1], "ABU")
                 ketr = {"dipindah": "Ditemukan", "dipindah_cek": "Perlu cek manual (jarak pindah jauh dibanding akurasi GPS)",
-                        "parkir": "Tidak jelas / tidak ditemukan, diparkir di luar batas SLS"}.get(r[1], "")
-                detail.append([desa, sls, kode, r[0], r[1], st, ketr, r[2], float(r[3]) if r[3] else None, r[4], r[5], r[6], r[7]])
+                        "parkir": "KERJAKAN MANUAL: tulisan tangan tidak terlihat/tidak terbaca, titik diparkir di luar batas SLS"}.get(r[1], "")
+                detail.append([desa, sls, kode, r[0], r[1], st, ketr, r[2], float(r[3]) if r[3] else None, r[4], r[5], r[6], r[7], None, None])
             c.close()
         else:
             c, t = feature_table(f)
@@ -65,7 +65,7 @@ for desa in sorted(d for d in os.listdir(root) if d.isdigit() and os.path.isdir(
 wb = Workbook()
 HDR_SLS = ["Desa", "SLS", "Kode gpkg", "Jumlah titik", "Hijau (ditemukan)", "Kuning (cek manual)", "Merah (tidak jelas)", "% ditemukan", "Warna", "Keterangan", "Status proses"]
 HDR_DET = ["Desa", "SLS", "Kode gpkg", "No bangunan", "Status", "Warna", "Keterangan", "Jarak pindah (m)", "Akurasi GPS (m)",
-           "Lat asli", "Lon asli", "Lat baru/posisi sekarang", "Lon baru/posisi sekarang"]
+           "Lat asli", "Lon asli", "Lat baru/posisi sekarang", "Lon baru/posisi sekarang", "Dikerjakan manual? (isi Ya)", "Catatan manual"]
 
 
 def style_header(ws, row):
@@ -135,7 +135,7 @@ for d in desas:
                 ws.cell(ws.max_row, col).fill = fills[r[5]]
     else:
         ws.append(["Belum ada SLS yang diproses di desa ini."])
-    for i, w in enumerate([8, 11, 20, 13, 17, 14, 58, 14, 14, 13, 13, 18, 18], 1):
+    for i, w in enumerate([8, 11, 20, 13, 17, 14, 70, 14, 14, 13, 13, 18, 18, 18, 30], 1):
         ws.column_dimensions[get_column_letter(i)].width = w
     ws.freeze_panes = "A3"
 

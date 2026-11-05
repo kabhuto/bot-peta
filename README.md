@@ -33,3 +33,15 @@ Python 3.10+ dengan `numpy`, `pillow`, `scipy`. Tanpa GDAL/OpenCV. Memakai `sqli
 ## Batasan
 - Belum mendukung gaya nomor yang dilingkari oval tangan.
 - Pembacaan angka belum diukur akurasinya secara statistik. Periksa hasil di QGIS.
+
+## Alur per SLS (versi terbaru)
+```
+set MAP=<nama peta, mis. "000102_Inset 1">   (opsional; bawaan = nomor SLS)
+python skrip/prep.py <desa> <sls> 30            # batas SLS, deteksi titik hitam, lembar potongan + kandidat nomor gpkg
+# baca lembar -> isi skrip/s<peta>_reads.json  ({"id potongan": nomor})
+python skrip/finish.py <desa> <sls> "<inset1>,<inset2>,<peta utama>" 400
+```
+- `finish.py` mencocokkan, menumpuk titik gpkg bernomor sama di satu tulisan (inset lebih dulu, peta utama terakhir),
+  memarkir yang tidak ditemukan di luar batas SLS, menyimpan `<kode>_rapi_parkir.gpkg`, dan memperbarui Excel.
+- Variabel lingkungan: `MAXV`, `SAT`, `ERO` (deteksi tinta), `LINE=warm` (batas SLS oranye), `GAP`.
+- Excel (`rekap.py`) punya kolom "Dikerjakan manual?" dan "Catatan manual" untuk titik parkir.

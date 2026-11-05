@@ -18,14 +18,18 @@ rows = c.execute(f'select fid,no_bang,geom from "{t}" where status_pindah=? orde
 # baris parkir di bawah bingkai peta (area legenda), jarak 20 px (~5,7 m)
 X0, Y0, DX, DY, PERROW = [int(v) for v in os.environ.get('PARK', '300,2590,20,24,70').split(',')]
 ok = True
+slot = {}                                   # satu nomor = satu posisi parkir (nomor ganda ditumpuk)
 for k, (fid, nb, blob) in enumerate(rows):
-    col = X0 + (k % PERROW) * DX
-    row = Y0 + (k // PERROW) * DY
+    if nb not in slot:
+        slot[nb] = len(slot)
+    j = slot[nb]
+    col = X0 + (j % PERROW) * DX
+    row = Y0 + (j // PERROW) * DY
     if row < H and col < W and inside[int(row), int(col)]:
         ok = False
     lat, lon = to_ll(col, row)
     newblob = blob[:8] + struct.pack("<BIdd", 1, 1, lon, lat)
-    c.execute(f'update "{t}" set geom=?, status_pindah=?, urut_parkir=? where fid=?', (newblob, "parkir", k + 1, fid))
+    c.execute(f'update "{t}" set geom=?, status_pindah=?, urut_parkir=? where fid=?', (newblob, "parkir", j + 1, fid))
 c.commit()
-print("titik diparkir:", len(rows), "| semua di luar batas SLS:", ok)
+print("titik diparkir:", len(rows), "| posisi parkir (nomor unik):", len(slot), "| semua di luar batas SLS:", ok)
 print(c.execute(f'select status_pindah,count(*) from "{t}" group by 1').fetchall())
