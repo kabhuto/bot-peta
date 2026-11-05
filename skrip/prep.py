@@ -93,11 +93,16 @@ print(f"[{sls}] titik hitam kandidat: {len(cand)} | titik gpkg: {len(rows)} | no
 font = ImageFont.truetype("arial.ttf", 19); fsm = ImageFont.truetype("arial.ttf", 15)
 BELOW, ABOVE, HALF = 78, 16, 33
 CW, CH, COLS, ROWS = 250, 385, 6, 3; PER = COLS * ROWS
+AROUND = int(os.environ.get("AROUND", 0))     # >0: potongan persegi di sekeliling titik (angka di atas/samping titik)
+if AROUND:
+    BELOW = ABOVE = HALF = AROUND; CW, CH, COLS, ROWS = 300, 360, 5, 3; PER = COLS * ROWS
 for s in range(math.ceil(len(cand) / PER)):
     sheet = Image.new("RGB", (CW * COLS, CH * ROWS), "white"); dr = ImageDraw.Draw(sheet)
     for k, o in enumerate(cand[s * PER:(s + 1) * PER]):
         cx_, cy_ = int(o["cx"]), int(o["cy"])
-        if rot == 90:      # "bawah" tegak = x mengecil
+        if AROUND:
+            box = (cx_ - AROUND, cy_ - AROUND, cx_ + AROUND, cy_ + AROUND); mark = (AROUND, AROUND)
+        elif rot == 90:      # "bawah" tegak = x mengecil
             box = (cx_ - BELOW, cy_ - HALF, cx_ + ABOVE, cy_ + HALF); mark = (BELOW, HALF)
         elif rot == -90:   # "bawah" tegak = x membesar
             box = (cx_ - ABOVE, cy_ - HALF, cx_ + BELOW, cy_ + HALF); mark = (ABOVE, HALF)
