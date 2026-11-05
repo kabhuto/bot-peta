@@ -36,10 +36,30 @@ fids = sorted(data[0]); groups = collections.defaultdict(list)
 for f in fids: groups[data[0][f][0]].append(f)
 final = os.path.join(SCR, "s" + sls + "_final_gab.gpkg"); shutil.copyfile(drafts[-1], final)
 cf = sqlite3.connect(final); chosen = {}
+import struct, math
+import numpy as np
+
+def footprint(m):
+    """kotak piksel inset -> fungsi (lon,lat) -> di dalam gambar? (peta utama tidak dipakai untuk menimpa area inset)"""
+    pgw = os.path.join(ROOT, "geo", desa, m + "_WSS.pgw")
+    A, D, B, E, C, F = [float(x) for x in open(pgw).read().split()]
+    Wm, Hm = Image.open(os.path.join(ROOT, "geo", desa, m + "_WSS.png")).size
+    Minv = np.linalg.inv(np.array([[A, B], [D, E]]))
+    def inside_(lon, lat):
+        x = lon * 6378137.0 * math.pi / 180.0; y = 6378137.0 * math.log(math.tan(math.pi / 4 + math.radians(lat) / 2))
+        u, v = Minv @ np.array([x - C, y - F]); return 0 <= u < Wm and 0 <= v < Hm
+    return inside_
+insets = [footprint(m) for m in maps[:-1]] if os.environ.get("MAIN_DALAM_INSET") != "1" else []
+dropped = []
 for nb, fl in groups.items():
     for k, d in enumerate(data):
         if any(d[f][1] in ("dipindah", "dipindah_cek") for f in fl):
+            if k == len(data) - 1 and insets:                  # hasil peta utama di dalam area inset: tidak dipercaya
+                lon, lat = struct.unpack("<dd", d[fl[0]][2][13:29])
+                if any(ins(lon, lat) for ins in insets):
+                    dropped.append(nb); break
             chosen[nb] = k; break
+if dropped: print(f"nomor hasil peta utama di dalam area inset (tidak dipakai, diparkir): {len(dropped)} -> {sorted(dropped, key=lambda s: int(s))}")
 for nb, fl in groups.items():
     k = chosen.get(nb)
     for f in fl:
