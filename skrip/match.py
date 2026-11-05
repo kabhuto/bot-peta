@@ -76,7 +76,7 @@ for p in pts:
         hdr = p["blob"][:8]
         newblob = hdr + struct.pack("<BIdd", 1, 1, lon, lat)
         c.execute(f'update "{t}" set geom=?, lat_asli=?, lon_asli=?, status_pindah=?, jarak_pindah_m=?, blob_id=? where fid=?',
-                  (newblob, p["lat"], p["lon"], "dipindah" if (dpx * PS <= max(float(os.environ.get("CEKM", 20)), 1.5 * p["acc"]) and p["num"] not in ambig and p["num"] not in ragu) else "dipindah_cek", round(dpx * PS, 1), sid, p["fid"]))
+                  (newblob, p["lat"], p["lon"], "dipindah" if (dpx * PS <= max(float(os.environ.get("CEKM", 100000)), 1.5 * p["acc"]) and p["num"] not in ambig and (os.environ.get("RAGU") != "1" or p["num"] not in ragu)) else "dipindah_cek", round(dpx * PS, 1), sid, p["fid"]))
     else:
         c.execute(f'update "{t}" set lat_asli=?, lon_asli=?, status_pindah=? where fid=?', (p["lat"], p["lon"], "belum_cocok", p["fid"]))
 c.commit()
