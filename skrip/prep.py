@@ -89,7 +89,7 @@ for i, sl_ in enumerate(ndi.find_objects(lab2), 1):
 if os.environ.get("SISA"):                    # pakai kandidat yang sudah ada (id bacaan lama tetap sah)
     cand = json.load(open(os.path.join(SCR, tag + "_cand.json")))
 N0 = len(cand)
-if os.environ.get("INK") and not os.environ.get("SISA"):
+if os.environ.get("INK"):
     # tulisan tanpa titik hitam: gumpalan goresan angka yang tidak berdekatan dengan titik hitam mana pun.
     # id disambung di belakang titik hitam (id lama tetap), posisi = pusat tinta tulisan.
     lab3, n3 = ndi.label(ndi.binary_dilation(mask, structure=np.ones((3, 3)), iterations=5))
