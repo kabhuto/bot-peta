@@ -44,7 +44,11 @@ for fid, nb, lat, lon, blob, acc in c.execute(f'select fid,no_bang,geotag_latitu
 
 moved = {}; log_mismatch = []; ambig = set()
 tul = collections.defaultdict(list)          # nomor -> tulisan (sid) yang membaca nomor itu dan dekat titik bernomor sama
+ragu = set()                                 # nomor yang bacaannya ditandai ragu ("69?") -> kuning (cek manual)
 for sid, num in sorted(reads.items(), key=lambda kv: int(kv[0])):
+    if str(num).endswith("?"):
+        num = int(str(num)[:-1]); ragu.add(num)
+    num = int(num)
     o = cand[int(sid)]
     near = [p for p in pts if p["num"] == num and np.hypot(p["px"][0] - o["cx"], p["px"][1] - o["cy"]) <= R]
     if not near:
@@ -72,7 +76,7 @@ for p in pts:
         hdr = p["blob"][:8]
         newblob = hdr + struct.pack("<BIdd", 1, 1, lon, lat)
         c.execute(f'update "{t}" set geom=?, lat_asli=?, lon_asli=?, status_pindah=?, jarak_pindah_m=?, blob_id=? where fid=?',
-                  (newblob, p["lat"], p["lon"], "dipindah" if (dpx * PS <= max(float(os.environ.get("CEKM", 20)), 1.5 * p["acc"]) and p["num"] not in ambig) else "dipindah_cek", round(dpx * PS, 1), sid, p["fid"]))
+                  (newblob, p["lat"], p["lon"], "dipindah" if (dpx * PS <= max(float(os.environ.get("CEKM", 20)), 1.5 * p["acc"]) and p["num"] not in ambig and p["num"] not in ragu) else "dipindah_cek", round(dpx * PS, 1), sid, p["fid"]))
     else:
         c.execute(f'update "{t}" set lat_asli=?, lon_asli=?, status_pindah=? where fid=?', (p["lat"], p["lon"], "belum_cocok", p["fid"]))
 c.commit()

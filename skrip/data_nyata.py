@@ -30,7 +30,9 @@ if __name__ == "__main__":
         reads = json.load(open(f))
         if not reads: continue
         peta = peta_dari_tag(tag)
-        png = next(iter(glob.glob(os.path.join(ROOT, "geo", "*", peta + "_WSS.png"))), None)
+        desa = {"s000100": "005"}.get(tag, "004")      # tag berkas kerja dipakai bersama 004/005; yang dibaca user sejauh ini: 004 + 005/000100
+        png = os.path.join(ROOT, "geo", desa, peta + "_WSS.png")
+        if not os.path.exists(png): png = None
         if not png: print("tak ada png", tag); continue
         im = Image.open(png).convert("RGB"); rot = rotasi(png[:-4] + ".pgw")
         cand = {o["id"]: o for o in json.load(open(os.path.join(SCR, tag + "_cand.json")))}

@@ -9,7 +9,7 @@ from PIL import Image, ImageDraw, ImageFilter
 Image.MAX_IMAGE_PIXELS = None
 SCR = os.path.dirname(os.path.abspath(__file__)); S = 96
 MN = sys.argv[1] if len(sys.argv) > 1 else r"C:\Users\User\AppData\Local\Temp\claude\d--2026-Quisioner\39da80b5-570c-4db8-b416-2019ca58b199\scratchpad"
-HOLD = ("s000302", "s000103_Inset1")
+HOLD = ("s000302", "s000500", "s000103_Inset1")
 torch.manual_seed(0); random.seed(0); np.random.seed(0)
 
 def mnist():
@@ -52,6 +52,19 @@ def sintetis(bg, dig, lab, n):
         X.append(np.asarray(out)); Y.append(etiket(txt))
     return np.array(X), np.array(Y)
 
+def skor(lp, i, num):
+    """log-probabilitas nomor `num` (string angka) untuk potongan ke-i"""
+    t = etiket(num); return sum(float(lp[i, k, t[k]]) for k in range(3))
+
+def kandidat(lp, benar, pool, k=8, ulang=5):
+    """akurasi bila dipilih dari k kandidat (benar + k-1 nomor acak dari pool); dihitung `ulang` kali"""
+    rnd = random.Random(1); ok = tot = 0
+    for _ in range(ulang):
+        for i, b in enumerate(benar):
+            lain = rnd.sample([p for p in pool if p != b], min(k - 1, len(pool) - 1)); c = [b] + lain
+            ok += max(c, key=lambda n: skor(lp, i, n)) == b; tot += 1
+    return ok / max(1, tot)
+
 def augment(x):
     x = x.float() / 255
     x = x * (0.8 + 0.4 * torch.rand(len(x), 1, 1, 1)) + 0.1 * (torch.rand(len(x), 1, 1, 1) - .5)
@@ -78,5 +91,8 @@ if __name__ == "__main__":
         m.eval()
         with torch.no_grad(): pv = m(Xv).argmax(2)
         acc = (pv == Yv).all(1).float().mean().item()
-        print(f"ep{ep} loss={tl/len(Xt):.3f} validasi persis={acc*100:.0f}% (n={len(Xv)})", flush=True)
+        with torch.no_grad(): lp = F.log_softmax(m(Xv), 2)
+        bebas = [str(int("".join(str(int(d)) for d in row if d < 10) or 0)) for row in pv]
+        accK = kandidat(lp, [str(int("".join(str(int(d)) for d in r if d < 10) or 0)) for r in Yv], pool=sorted({str(int("".join(str(int(d)) for d in r if d < 10) or 0)) for r in Yv}))
+        print(f"ep{ep} loss={tl/len(Xt):.3f} validasi bebas={acc*100:.0f}% | pilih dari 8 kandidat={accK*100:.0f}% (n={len(Xv)})", flush=True)
     torch.save(m.state_dict(), os.path.join(SCR, "model.pt"))
