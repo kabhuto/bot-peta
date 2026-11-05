@@ -22,7 +22,8 @@ Python 3.10+ dengan `numpy`, `pillow`, `scipy`. Tanpa GDAL/OpenCV. Memakai `sqli
 4. Baca nomor tiap potongan, simpan sebagai `{id_titik: nomor}` di `<tag>_reads.json`, dan posisi titik di `<tag>_cand.json`.
 5. `match.py`: mencocokkan nomor terbaca dengan `no_bang` di gpkg. Nomor ganda di gpkg ikut menumpuk ke satu koordinat. Status `dipindah`, `dipindah_cek` (jarak jauh dibanding akurasi GPS), atau `belum_cocok`. Koordinat lama disimpan di `lat_asli`/`lon_asli`.
 6. `park.py`: memarkir titik `belum_cocok` di luar batas SLS (status `parkir`).
-7. `verify_sheets.py`, `nearest.py`, `shift.py`, `around.py`: alat pemeriksaan.
+7. `rekap.py`: membuat `Rekap_bot_peta.xlsx` (lembar Ringkasan + satu lembar per folder desa, berwarna hijau/kuning/merah/abu).
+8. `verify_sheets.py`, `nearest.py`, `shift.py`, `around.py`: alat pemeriksaan.
 
 ## Aturan
 - Nomor tulisan tangan tanpa titik gpkg: dilewati.
