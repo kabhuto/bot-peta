@@ -86,6 +86,22 @@ for i, sl_ in enumerate(ndi.find_objects(lab2), 1):
     if np.hypot(gp[:, 0] - cx, gp[:, 1] - cy).min() * PS > RM: continue
     if any(np.hypot(d_["cx"] - cx, d_["cy"] - cy) < 16 for d_ in cand): continue
     cand.append(dict(id=len(cand), cx=float(cx), cy=float(cy)))
+N0 = len(cand)
+if os.environ.get("INK"):
+    # tulisan tanpa titik hitam: gumpalan goresan angka yang tidak berdekatan dengan titik hitam mana pun.
+    # id disambung di belakang titik hitam (id lama tetap), posisi = pusat tinta tulisan.
+    lab3, n3 = ndi.label(ndi.binary_dilation(mask, structure=np.ones((3, 3)), iterations=5))
+    for i, sl_ in enumerate(ndi.find_objects(lab3), 1):
+        h = sl_[0].stop - sl_[0].start; w = sl_[1].stop - sl_[1].start
+        if not (14 <= max(h, w) <= 80 and min(h, w) >= 8): continue
+        comp = (lab3[sl_] == i) & mask[sl_]
+        if comp.sum() < 70: continue
+        yy, xx = np.nonzero(comp); cy = yy.mean() + sl_[0].start; cx = xx.mean() + sl_[1].start
+        if not zone[int(cy), int(cx)]: continue
+        if np.hypot(gp[:, 0] - cx, gp[:, 1] - cy).min() * PS > RM: continue
+        if any(np.hypot(d_["cx"] - cx, d_["cy"] - cy) < 30 for d_ in cand): continue
+        cand.append(dict(id=len(cand), cx=float(cx), cy=float(cy), kind="tulisan"))
+    print(f"[{sls}] tulisan tanpa titik hitam (tambahan): {len(cand) - N0}")
 json.dump(cand, open(os.path.join(SCR, tag + "_cand.json"), "w"))
 print(f"[{sls}] titik hitam kandidat: {len(cand)} | titik gpkg: {len(rows)} | nomor unik gpkg: {len({r[0] for r in rows})}")
 
@@ -96,9 +112,12 @@ CW, CH, COLS, ROWS = 250, 385, 6, 3; PER = COLS * ROWS
 AROUND = int(os.environ.get("AROUND", 0))     # >0: potongan persegi di sekeliling titik (angka di atas/samping titik)
 if AROUND:
     BELOW = ABOVE = HALF = AROUND; CW, CH, COLS, ROWS = 300, 360, 5, 3; PER = COLS * ROWS
-for s in range(math.ceil(len(cand) / PER)):
+NEWONLY = int(os.environ.get("NEWONLY", 0))   # 1: lembar hanya untuk kandidat tulisan tambahan (xsheet), bacaan titik hitam tetap
+shown = cand[N0:] if NEWONLY else cand
+pref = "_xsheet" if NEWONLY else "_sheet"
+for s in range(math.ceil(len(shown) / PER)):
     sheet = Image.new("RGB", (CW * COLS, CH * ROWS), "white"); dr = ImageDraw.Draw(sheet)
-    for k, o in enumerate(cand[s * PER:(s + 1) * PER]):
+    for k, o in enumerate(shown[s * PER:(s + 1) * PER]):
         cx_, cy_ = int(o["cx"]), int(o["cy"])
         if AROUND:
             box = (cx_ - AROUND, cy_ - AROUND, cx_ + AROUND, cy_ + AROUND); mark = (AROUND, AROUND)
@@ -124,5 +143,5 @@ for s in range(math.ceil(len(cand) / PER)):
         dr.text((x + 5, y + 2), f"#{o['id']}", fill="red", font=font)
         dr.text((x + 5, y + CH - 38), "kand: " + ",".join(seen[:4]), fill=(0, 90, 200), font=fsm)
         dr.text((x + 5, y + CH - 20), (",".join(seen[4:8]) if len(seen) > 4 else ""), fill=(0, 90, 200), font=fsm)
-    sheet.save(os.path.join(SCR, f"{tag}_sheet{s}.jpg"), quality=88)
-print(f"[{sls}] lembar: {math.ceil(len(cand) / PER)}  (berkas: {tag}_sheet*.jpg)")
+    sheet.save(os.path.join(SCR, f"{tag}{pref}{s}.jpg"), quality=88)
+print(f"[{sls}] lembar: {math.ceil(len(shown) / PER)}  (berkas: {tag}{pref}*.jpg)")
