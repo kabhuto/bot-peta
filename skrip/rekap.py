@@ -62,7 +62,6 @@ for desa in sorted(d for d in os.listdir(root) if d.isdigit() and os.path.isdir(
             n = c.execute(f'select count(*) from "{t}"').fetchone()[0]; c.close()
             rekap.append([desa, sls, kode, n, None, None, None, None, "ABU", "Belum diproses", "Belum diproses"])
 
-wb = Workbook()
 HDR_SLS = ["Desa", "SLS", "Kode gpkg", "Jumlah titik", "Hijau (ditemukan)", "Kuning (cek manual)", "Merah (tidak jelas)", "% ditemukan", "Warna", "Keterangan", "Status proses"]
 HDR_DET = ["Desa", "SLS", "Kode gpkg", "No bangunan", "Status", "Warna", "Keterangan", "Jarak pindah (m)", "Akurasi GPS (m)",
            "Lat asli", "Lon asli", "Lat baru/posisi sekarang", "Lon baru/posisi sekarang", "Dikerjakan manual? (isi Ya)", "Catatan manual"]
@@ -74,93 +73,51 @@ def style_header(ws, row):
             c.fill = head_fill; c.font = head_font; c.alignment = Alignment(horizontal="center", vertical="center", wrap_text=True)
 
 
-def warna_desa(rs):
-    proc_ = [r for r in rs if r[10] == "Sudah diproses"]
-    if not proc_:
-        return "ABU"
-    if len(proc_) < len(rs):
-        return "ABU"
-    if all(r[8] == "HIJAU" for r in proc_):
-        return "HIJAU"
-    if sum(1 for r in proc_ if r[8] == "MERAH") * 2 > len(proc_):
-        return "MERAH"
-    return "KUNING"
-
-
 desas = sorted({r[0] for r in rekap})
-
-# --- lembar ringkasan per desa
-wr = wb.active; wr.title = "Ringkasan"
-wr.append(["Desa (folder)", "Jumlah SLS", "Sudah diproses", "Belum diproses", "SLS hijau", "SLS kuning", "SLS merah", "Total titik", "Titik hijau", "Titik kuning", "Titik merah", "Status desa"])
 for d in desas:
     rs = [r for r in rekap if r[0] == d]; pr = [r for r in rs if r[10] == "Sudah diproses"]
-    wr.append([d, len(rs), len(pr), len(rs) - len(pr),
-               sum(1 for r in pr if r[8] == "HIJAU"), sum(1 for r in pr if r[8] == "KUNING"), sum(1 for r in pr if r[8] == "MERAH"),
-               sum(r[3] for r in rs), sum(r[4] or 0 for r in pr), sum(r[5] or 0 for r in pr), sum(r[6] or 0 for r in pr),
-               "Selesai" if len(pr) == len(rs) else ("Sebagian" if pr else "Belum diproses")])
-    k = warna_desa(rs)
-    for col in (1, 12):
-        wr.cell(wr.max_row, col).fill = fills[k]
-    for cell in wr[wr.max_row]:
-        cell.border = border
-wr.append(["TOTAL"] + [sum(wr.cell(r, c).value for r in range(2, wr.max_row + 1)) for c in range(2, 12)])
-for cell in wr[wr.max_row]:
-    cell.font = Font(bold=True); cell.border = border
-style_header(wr, 1)
-for i, w in enumerate([14, 11, 14, 14, 10, 11, 10, 12, 11, 12, 11, 16], 1):
-    wr.column_dimensions[get_column_letter(i)].width = w
-wr.freeze_panes = "A2"
-
-# --- satu lembar per desa: tabel SLS di atas, detail titik di bawahnya
-for d in desas:
-    ws = wb.create_sheet(d)
-    ws.append(["Desa " + d + " - rekap per SLS"]); ws.cell(1, 1).font = Font(bold=True, size=13)
-    ws.append(HDR_SLS); style_header(ws, 2)
-    for r in [r for r in rekap if r[0] == d]:
+    wb = Workbook()
+    ws = wb.active; ws.title = "Rekap SLS"
+    ws.append(HDR_SLS); style_header(ws, 1)
+    for r in rs:
         ws.append(r)
         for cell in ws[ws.max_row]:
             cell.border = border
         for col in (1, 2, 3, 4, 9, 10, 11):
             ws.cell(ws.max_row, col).fill = fills[r[8]]
-    dets = [x for x in detail if x[0] == d]
     ws.append([])
-    ws.append(["Desa " + d + " - detail titik (SLS yang sudah diproses)"]); ws.cell(ws.max_row, 1).font = Font(bold=True, size=13)
-    if dets:
-        ws.append(HDR_DET); style_header(ws, ws.max_row)
-        for r in dets:
-            ws.append(r)
-            for cell in ws[ws.max_row]:
-                cell.border = border
-            for col in range(1, 8):
-                ws.cell(ws.max_row, col).fill = fills[r[5]]
-    else:
-        ws.append(["Belum ada SLS yang diproses di desa ini."])
-    for i, w in enumerate([8, 11, 20, 13, 17, 14, 70, 14, 14, 13, 13, 18, 18, 18, 30], 1):
-        ws.column_dimensions[get_column_letter(i)].width = w
-    ws.freeze_panes = "A3"
+    ws.append(["Ringkasan desa " + d]); ws.cell(ws.max_row, 1).font = Font(bold=True)
+    for label, val in [("Jumlah SLS", len(rs)), ("Sudah diproses", len(pr)), ("Belum diproses", len(rs) - len(pr)),
+                       ("SLS hijau", sum(1 for r in pr if r[8] == "HIJAU")), ("SLS kuning", sum(1 for r in pr if r[8] == "KUNING")),
+                       ("SLS merah", sum(1 for r in pr if r[8] == "MERAH")), ("Total titik", sum(r[3] for r in rs)),
+                       ("Titik hijau", sum(r[4] or 0 for r in pr)), ("Titik kuning", sum(r[5] or 0 for r in pr)), ("Titik merah", sum(r[6] or 0 for r in pr))]:
+        ws.append([label, val])
+    for i_, w in enumerate([8, 11, 20, 13, 17, 14, 14, 12, 10, 52, 16], 1):
+        ws.column_dimensions[get_column_letter(i_)].width = w
+    ws.freeze_panes = "A2"
 
-proc = [r for r in rekap if r[10] == "Sudah diproses"]
+    wd = wb.create_sheet("Detail titik")
+    wd.append(HDR_DET); style_header(wd, 1)
+    for r in [x for x in detail if x[0] == d]:
+        wd.append(r)
+        for cell in wd[wd.max_row]:
+            cell.border = border
+        for col in range(1, 8):
+            wd.cell(wd.max_row, col).fill = fills[r[5]]
+    for i_, w in enumerate([8, 11, 20, 13, 17, 14, 70, 14, 14, 13, 13, 18, 18, 18, 30], 1):
+        wd.column_dimensions[get_column_letter(i_)].width = w
+    wd.freeze_panes = "A2"; wd.auto_filter.ref = wd.dimensions
 
-wl = wb.create_sheet("Keterangan")
-for line in [
-    ["Warna", "Arti"],
-    ["HIJAU", "Titik ditemukan dan sudah dipindah, tanpa perlu perbaikan atau cek manual."],
-    ["KUNING", "Perlu cek manual: titik sudah dipindah tapi jaraknya jauh dibanding akurasi GPS, atau sebagian titik di SLS diparkir."],
-    ["MERAH", "Tidak jelas: titik tidak ditemukan (diparkir di luar batas SLS). Untuk SLS: kurang dari separuh titik ditemukan."],
-    ["ABU", "Belum diproses."],
-    [],
-    ["Catatan", "Pembacaan angka tulisan tangan dilakukan dari potongan gambar dan belum diukur akurasinya secara statistik. Periksa sampel hasil di QGIS."],
-]:
-    wl.append(line)
-for c in wl[1]:
-    c.fill = head_fill; c.font = head_font
-for i, k in enumerate(["HIJAU", "KUNING", "MERAH", "ABU"], 2):
-    wl.cell(i, 1).fill = fills[k]
-wl.column_dimensions["A"].width = 12; wl.column_dimensions["B"].width = 120
-
-out = os.path.join(root, "Rekap_bot_peta.xlsx")
-wb.save(out)
-print("tersimpan:", out)
-print("SLS:", len(rekap), "| diproses:", len(proc), "| titik detail:", len(detail))
-for r in proc:
-    print(r[:10])
+    wl = wb.create_sheet("Keterangan")
+    for line in [["Warna", "Arti"],
+                 ["HIJAU", "Titik ditemukan dan sudah dipindah, tanpa perlu perbaikan atau cek manual."],
+                 ["KUNING", "Perlu cek manual: titik sudah dipindah tapi jaraknya jauh dibanding akurasi GPS, atau sebagian titik di SLS diparkir."],
+                 ["MERAH", "Tidak jelas / tidak ditemukan: titik diparkir di luar batas SLS, KERJAKAN MANUAL."],
+                 ["ABU", "Belum diproses (atau peta tidak tersedia)."]]:
+        wl.append(line)
+    style_header(wl, 1)
+    for i_, k in enumerate(["HIJAU", "KUNING", "MERAH", "ABU"], 2):
+        wl.cell(i_, 1).fill = fills[k]
+    wl.column_dimensions["A"].width = 12; wl.column_dimensions["B"].width = 120
+    out = os.path.join(root, "Rekap_" + d + ".xlsx")
+    wb.save(out); print("tersimpan:", out, "| SLS:", len(rs), "diproses:", len(pr))
