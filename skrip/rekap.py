@@ -120,4 +120,9 @@ for d in desas:
         wl.cell(i_, 1).fill = fills[k]
     wl.column_dimensions["A"].width = 12; wl.column_dimensions["B"].width = 120
     out = os.path.join(root, "Rekap_" + d + ".xlsx")
-    wb.save(out); print("tersimpan:", out, "| SLS:", len(rs), "diproses:", len(pr))
+    try:
+        wb.save(out)
+    except PermissionError:                      # file sedang dibuka di Excel
+        out = os.path.join(root, "Rekap_" + d + "_terbaru.xlsx"); wb.save(out)
+        print("PERINGATAN: Rekap_" + d + ".xlsx sedang dibuka; hasil disimpan sebagai", os.path.basename(out))
+    print("tersimpan:", out, "| SLS:", len(rs), "diproses:", len(pr))
